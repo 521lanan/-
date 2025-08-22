@@ -2,85 +2,119 @@
 <html lang="zh">
 <head>
 <meta charset="utf-8"/>
-<title>极简俄语单词机</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>山北月的俄语卡</title>
 <style>
-  :root{--primary:#1a73e8;--light:#e8f0fe}
-  body{margin:0;padding:20px;background:var(--light);font-family:Segoe UI;text-align:center}
-  .btn{background:var(--primary);color:#fff;border:none;padding:10px 20px;border-radius:5px;margin:5px;cursor:pointer}
-  .options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:20px auto;max-width:400px}
-  .option{background:#fff;border:1px solid var(--primary);border-radius:5px;padding:12px;cursor:pointer}
-  .correct{background:#c8e6c9}.incorrect{background:#ffcdd2}
-  .card-outer{perspective:1000px;margin:30px auto;max-width:400px}
-  .card{width:100%;height:180px;position:relative;transform-style:preserve-3d;transition:transform .6s;cursor:pointer}
-  .card div{position:absolute;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;border-radius:10px;backface-visibility:hidden}
-  .card .front{background:#fff;color:var(--primary)}
-  .card .back{background:var(--primary);color:#fff;transform:rotateY(180deg)}
-  .card.flipped{transform:rotateY(180deg)}
-  .stats{margin:10px 0;font-weight:bold}
+:root{
+  --purple:#8A2BE2;
+  --light:#E6E6FA;
+  --card:#fff;
+}
+body{margin:0;padding:20px;background:var(--light);font-family:Segoe UI;text-align:center;color:#333}
+h1{color:var(--purple)}
+.btn{background:var(--purple);color:#fff;border:none;padding:10px 20px;border-radius:6px;margin:6px;cursor:pointer;font-size:16px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.options{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:420px;margin:20px auto}
+.option{background:var(--card);border:2px solid var(--purple);border-radius:8px;padding:12px;cursor:pointer;transition:.2s}
+.option:hover{background:#f0e6ff}
+.correct{background:#c8e6c9!important;border-color:#4caf50}
+.incorrect{background:#ffcdd2!important;border-color:#f44336}
+.card-outer{perspective:1000px;margin:30px auto;max-width:360px}
+.card{width:100%;height:180px;position:relative;transform-style:preserve-3d;transition:transform .6s;cursor:pointer}
+.card div{position:absolute;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:26px;border-radius:10px;backface-visibility:hidden}
+.card .front{background:var(--card);color:var(--purple)}
+.card .back{background:var(--purple);color:#fff;transform:rotateY(180deg)}
+.card.flipped{transform:rotateY(180deg)}
+.stats{margin:10px;font-weight:bold}
 </style>
 </head>
 <body>
-  <h1>俄语单词机（离线版）</h1>
+<h1>俄语背单词</h1>
 
-  <!-- 模式选择 -->
-  <section id="menu">
-    <label><input type="checkbox" id="random"> 随机顺序</label><br>
-    <button class="btn" onclick="startQuiz()">看俄语选中文</button>
-    <button class="btn" onclick="startCard()">闪卡模式</button>
-  </section>
+<!-- 模式选择 -->
+<div id="menu">
+  <button class="btn" onclick="startQuiz(false)">顺序背词</button>
+  <button class="btn" onclick="startQuiz(true)">随机背词</button>
+  <button class="btn" onclick="startCard(false)">顺序闪卡</button>
+  <button class="btn" onclick="startCard(true)">随机闪卡</button>
+</div>
 
-  <!-- 选择题 -->
-  <section id="quizSec" style="display:none">
-    <h3 id="quizQ"></h3>
-    <div class="options" id="quizOpts"></div>
-    <div id="quizFb"></div>
-    <button class="btn" id="quizNext" style="display:none" onclick="nextQuiz()">下一题</button>
-    <div class="stats">
-      <span id="quizCorrect">0</span> 对 / <span id="quizTotal">0</span>
+<!-- 闪卡 -->
+<section id="cardSec" style="display:none">
+  <div class="card-outer">
+    <div class="card" id="flashCard" onclick="flipCard()">
+      <div class="front" id="frontTxt">加载中...</div>
+      <div class="back" id="backTxt"></div>
     </div>
-  </section>
+  </div>
+  <div>
+    <button class="btn" onclick="prevCard()">上一个</button>
+    <button class="btn" onclick="nextCard()">下一个</button>
+  </div>
+  <div class="stats" id="cardStats"></div>
+</section>
 
-  <!-- 闪卡 -->
-  <section id="cardSec" style="display:none">
-    <div class="card-outer">
-      <div class="card" id="flashCard">
-        <div class="front" id="frontTxt">加载中...</div>
-        <div class="back" id="backTxt"></div>
-      </div>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-top:10px">
-      <button class="btn" onclick="prevCard()">◀</button>
-      <button class="btn" onclick="nextCard()">▶</button>
-    </div>
-    <div class="stats" id="cardStats"></div>
-  </section>
+<!-- 选择题 -->
+<section id="quizSec" style="display:none">
+  <h3 id="quizQ"></h3>
+  <div class="options" id="quizOpts"></div>
+  <div id="quizFb"></div>
+  <button class="btn" id="quizNext" style="display:none" onclick="nextQuiz()">下一题</button>
+  <div class="stats">
+    正确 <span id="quizCorrect">0</span> / 错误 <span id="quizWrong">0</span>
+  </div>
+</section>
 
 <script>
-/* 单词数据 */
-let words = [], list = [], idx = 0, correct = 0, total = 0;
+/* ===== 1. 单词直接写死 ===== */
+const WORDS = [
+  {russian:"привет", chinese:"你好"},
+  {russian:"спасибо", chinese:"谢谢"},
+  {russian:"пока", chinese:"再见"},
+  {russian:"дом", chinese:"房子"},
+  {russian:"вода", chinese:"水"},
+  {russian:"кот", chinese:"猫"},
+  {russian:"солнце", chinese:"太阳"},
+  {russian:"книга", chinese:"书"}
+];
 
-/* 工具函数 */
+/* ===== 2. 全局变量 ===== */
+let list = [], idx = 0, correct = 0, wrong = 0, mode = '';
+
+/* ===== 3. 工具函数 ===== */
 const $ = id => document.getElementById(id);
 const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
 
-/* 1. 加载本地 JSON */
-fetch('words.json')
-  .then(r => r.json())
-  .then(data => {
-    words = data;
-    $('menu').style.display = 'block';
-  })
-  .catch(err => alert('加载 words.json 失败：' + err));
+/* ===== 4. 闪卡模式 ===== */
+function startCard(random) {
+  list = random ? shuffle([...WORDS]) : [...WORDS];
+  idx = 0;
+  mode = 'card';
+  $('menu').style.display = 'none';
+  $('cardSec').style.display = 'block';
+  $('quizSec').style.display = 'none';
+  loadCard();
+}
+function loadCard() {
+  if (idx >= list.length) {
+    $('frontTxt').textContent = '已完成';
+    $('backTxt').textContent = '';
+    return;
+  }
+  $('frontTxt').textContent = list[idx].russian;
+  $('backTxt').textContent = list[idx].chinese;
+  $('flashCard').classList.remove('flipped');
+  $('cardStats').textContent = `${idx + 1} / ${list.length}`;
+}
+function flipCard() { $('flashCard').classList.toggle('flipped'); }
+function prevCard() { if (idx > 0) { idx--; loadCard(); } }
+function nextCard() { if (idx < list.length - 1) { idx++; loadCard(); } }
 
-/* 2. 获取当前列表 */
-function getList() { return $('random').checked ? shuffle(words) : words; }
-
-/* 3. 选择题模式 */
-function startQuiz() {
-  list = getList();
-  idx = correct = 0;
-  total = list.length;
+/* ===== 5. 选择题模式 ===== */
+function startQuiz(random) {
+  list = random ? shuffle([...WORDS]) : [...WORDS];
+  idx = correct = wrong = 0;
+  mode = 'quiz';
   $('menu').style.display = 'none';
   $('quizSec').style.display = 'block';
   $('cardSec').style.display = 'none';
@@ -90,18 +124,18 @@ function loadQuiz() {
   if (idx >= list.length) {
     $('quizQ').textContent = '完成！';
     $('quizOpts').innerHTML = '';
-    $('quizFb').textContent = `答对 ${correct}/${total}`;
+    $('quizFb').textContent = `答对 ${correct} / 共 ${list.length}`;
     $('quizNext').style.display = 'none';
     return;
   }
-  const {r, c} = list[idx];
-  $('quizQ').textContent = `"${r}" 的中文意思是？`;
-  const opts = [{chinese: c, ok: true}];
+  const {russian, chinese} = list[idx];
+  $('quizQ').textContent = `"${russian}" 的中文意思是？`;
+  const opts = [{chinese, ok: true}];
   const used = new Set([idx]);
   while (opts.length < 4) {
     const r2 = Math.floor(Math.random() * list.length);
     if (!used.has(r2)) {
-      opts.push({chinese: list[r2].c, ok: false});
+      opts.push({chinese: list[r2].chinese, ok: false});
       used.add(r2);
     }
   }
@@ -113,52 +147,36 @@ function loadQuiz() {
     d.textContent = o.chinese;
     d.onclick = () => {
       box.querySelectorAll('.option').forEach(el => el.onclick = null);
-      if (o.ok) { d.classList.add('correct'); correct++; $('quizFb').textContent = '正确！'; }
-      else { d.classList.add('incorrect'); $('quizFb').textContent = `正确：${c}`; }
+      if (o.ok) {
+        d.classList.add('correct');
+        correct++;
+        $('quizFb').textContent = '正确！';
+      } else {
+        d.classList.add('incorrect');
+        wrong++;
+        $('quizFb').textContent = `正确：${chinese}`;
+      }
+      $('quizCorrect').textContent = correct;
+      $('quizWrong').textContent = wrong;
       $('quizNext').style.display = 'inline-block';
     };
     box.appendChild(d);
   });
   $('quizFb').textContent = '';
   $('quizNext').style.display = 'none';
-  $('quizCorrect').textContent = correct;
-  $('quizTotal').textContent = total;
 }
 function nextQuiz() { idx++; loadQuiz(); }
 
-/* 4. 闪卡模式 */
-function startCard() {
-  list = getList();
-  idx = 0;
-  $('menu').style.display = 'none';
-  $('quizSec').style.display = 'none';
-  $('cardSec').style.display = 'block';
-  loadCard();
-}
-function loadCard() {
-  if (idx >= list.length) {
-    $('frontTxt').textContent = '已完成';
-    $('backTxt').textContent = '';
-    return;
-  }
-  $('frontTxt').textContent = list[idx].r;
-  $('backTxt').textContent = list[idx].c;
-  $('flashCard').classList.remove('flipped');
-  $('cardStats').textContent = `${idx + 1} / ${list.length}`;
-}
-function prevCard() { if (idx > 0) { idx--; loadCard(); } }
-function nextCard() { if (idx < list.length - 1) { idx++; loadCard(); } }
-
-/* 5. 键盘 & 触屏 */
+/* ===== 6. 键盘 & 触屏 ===== */
 document.addEventListener('keydown', e => {
-  if ($('cardSec').style.display !== 'none') {
+  if (mode === 'card') {
     if (e.key === 'ArrowLeft') prevCard();
     if (e.key === 'ArrowRight') nextCard();
   }
 });
 let touchX = null;
-$('flashCard').addEventListener('touchstart', e => touchX = e.touches[0].clientX);
-$('flashCard').addEventListener('touchend', e => {
+document.getElementById('flashCard').addEventListener('touchstart', e => touchX = e.touches[0].clientX);
+document.getElementById('flashCard').addEventListener('touchend', e => {
   if (touchX === null) return;
   const dx = e.changedTouches[0].clientX - touchX;
   if (Math.abs(dx) > 50) dx > 0 ? prevCard() : nextCard();
