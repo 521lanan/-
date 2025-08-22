@@ -3,59 +3,81 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>山北月的俄语</title>
+<title>山北月的俄语词卡</title>
 <style>
-:root{--purple:#8A2BE2;--light:#E6E6FA;--card:#fff}
-body{margin:0;padding:20px;background:var(--light);font-family:Segoe UI;text-align:center;color:#333}
-h1{color:var(--purple)}
-.btn{background:var(--purple);color:#fff;border:none;padding:10px 20px;border-radius:6px;margin:6px;cursor:pointer;font-size:16px}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.options{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:420px;margin:20px auto}
-.option{background:var(--card);border:2px solid var(--purple);border-radius:8px;padding:12px;cursor:pointer;transition:.2s}
-.option:hover{background:#f0e6ff}
-.correct{background:#c8e6c9!important;border-color:#4caf50}
-.incorrect{background:#ffcdd2!important;border-color:#f44336}
-.card-outer{perspective:1000px;margin:30px auto;max-width:360px}
-.card{width:100%;height:180px;position:relative;border:2px solid var(--purple);border-radius:10px;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer}
-.card span{display:block;margin-top:8px;font-size:20px;color:var(--purple)}
-.stats{margin:10px;font-weight:bold}
+:root{
+  --purple:#8A2BE2;
+  --purple-light:#C084FC;
+  --bg:#F3E5F5;
+  --white:#FFF;
+  --correct:#4caf50;
+  --wrong:#f44336;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI}
+body{background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;color:#333}
+h1{color:var(--purple);margin-bottom:20px}
+.btn{background:linear-gradient(135deg,var(--purple),var(--purple-light));color:#fff;border:none;padding:12px 24px;border-radius:25px;margin:8px;cursor:pointer;font-size:16px;box-shadow:0 4px 8px rgba(0,0,0,.2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.card-wrapper{display:flex;flex-direction:column;align-items:center;margin:20px 0}
+.card{
+  width:320px;min-height:200px;
+  background:var(--white);
+  border-radius:20px;
+  box-shadow:0 8px 16px rgba(138,43,226,.3);
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  cursor:pointer;transition:transform .3s;
+}
+.card:hover{transform:translateY(-5px)}
+.card .word{font-size:28px;font-weight:bold;color:var(--purple)}
+.card .mean{font-size:20px;color:#555;margin-top:8px}
+.controls{display:flex;gap:20px;margin-top:15px}
+.options{display:grid;grid-template-columns:1fr 1fr;gap:15px;max-width:420px;width:100%;margin:20px auto}
+.option{
+  background:var(--white);border:2px solid var(--purple-light);border-radius:14px;
+  padding:16px;font-size:18px;cursor:pointer;transition:.3s;
+}
+.option:hover{background:var(--purple-light);color:#fff}
+.correct{background:var(--correct)!important;border-color:var(--correct)}
+.incorrect{background:var(--wrong)!important;border-color:var(--wrong)}
+.stats{font-size:18px;margin-top:10px}
 </style>
 </head>
 <body>
-  <h1>俄语背单词</h1>
+<h1>带你背单词</h1>
 
-  <!-- 模式选择 -->
-  <div id="menu">
-    <button class="btn" onclick="startQuiz(false)">顺序背词</button>
-    <button class="btn" onclick="startQuiz(true)">随机背词</button>
-    <button class="btn" onclick="startCard(false)">顺序闪卡</button>
-    <button class="btn" onclick="startCard(true)">随机闪卡</button>
+<!-- 模式选择 -->
+<div id="menu">
+  <button class="btn" onclick="startQuiz(false)">顺序选义</button>
+  <button class="btn" onclick="startQuiz(true)">随机选义</button>
+  <button class="btn" onclick="startCard(false)">顺序闪卡</button>
+  <button class="btn" onclick="startCard(true)">随机闪卡</button>
+</div>
+
+<!-- 闪卡 -->
+<section id="cardSec" style="display:none" class="card-wrapper">
+  <div class="card" onclick="showCard()">
+    <div class="word" id="cardRu"></div>
+    <div class="mean" id="cardCn">(点击查看词义)</div>
   </div>
+  <div class="controls">
+    <button class="btn" onclick="prevCard()">上一个</button>
+    <button class="btn" onclick="nextCard()">下一个</button>
+  </div>
+  <div class="stats" id="cardStats"></div>
+</section>
 
-  <!-- 闪卡模式 -->
-  <section id="cardSec" style="display:none">
-    <div class="card" id="flashCard" onclick="showCardMeaning()">
-      <span id="cardRu">加载中...</span>
-      <span id="cardCn" style="display:none;color:var(--purple)"></span>
-    </div>
-    <div>
-      <button class="btn" onclick="prevCard()">上一个</button>
-      <button class="btn" onclick="nextCard()">下一个</button>
-    </div>
-    <div class="stats" id="cardStats"></div>
-  </section>
-
-  <!-- 看俄语选汉语 -->
-  <section id="quizSec" style="display:none">
-    <h3 id="quizQ"></h3>
-    <div class="options" id="quizOpts"></div>
-    <div class="stats">
-      正确 <span id="quizCorrect">0</span> / 错误 <span id="quizWrong">0</span>
-    </div>
-    <button class="btn" id="quizNext" style="display:none" onclick="nextQuiz()">下一题</button>
-  </section>
+<!-- 看俄语选汉语 -->
+<section id="quizSec" style="display:none">
+  <h2 id="quizQ"></h2>
+  <div class="options" id="quizOpts"></div>
+  <div class="stats">
+    正确 <span id="quizCorrect">0</span> | 错误 <span id="quizWrong">0</span>
+  </div>
+  <button class="btn" id="quizNext" style="display:none" onclick="nextQuiz()">下一题</button>
+</section>
 
 <script>
+/* 1. 单词直接写在代码里 */
 const WORDS = [
   {russian:"привет", chinese:"你好"},
   {russian:"спасибо", chinese:"谢谢"},
@@ -68,8 +90,6 @@ const WORDS = [
 ];
 
 let list = [], idx = 0, correct = 0, wrong = 0, mode = '';
-
-/* 通用工具 */
 const $ = id => document.getElementById(id);
 const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
 
@@ -79,22 +99,23 @@ function startCard(random) {
   idx = 0;
   mode = 'card';
   $('menu').style.display = 'none';
-  $('cardSec').style.display = 'block';
+  $('cardSec').style.display = 'flex';
   $('quizSec').style.display = 'none';
   loadCard();
 }
 function loadCard() {
   if (idx >= list.length) {
     $('cardRu').textContent = '已完成';
-    $('cardCn').style.display = 'none';
+    $('cardCn').textContent = '';
     return;
   }
   $('cardRu').textContent = list[idx].russian;
-  $('cardCn').textContent = list[idx].chinese;
-  $('cardCn').style.display = 'none';           // 默认隐藏中文
+  $('cardCn').textContent = '(点击查看词义)';
   $('cardStats').textContent = `${idx + 1} / ${list.length}`;
 }
-function showCardMeaning() { $('cardCn').style.display = 'inline'; }
+function showCard() {
+  $('cardCn').textContent = list[idx].chinese;
+}
 function prevCard() { if (idx > 0) { idx--; loadCard(); } }
 function nextCard() { if (idx < list.length - 1) { idx++; loadCard(); } }
 
@@ -110,12 +131,14 @@ function startQuiz(random) {
 }
 function loadQuiz() {
   if (idx >= list.length) {
-    $('quizQ').textContent = `完成！答对 ${correct} / ${list.length}`;
+    $('quizQ').textContent = `完成！答对 ${correct}/${list.length}`;
     $('quizOpts').innerHTML = '';
     return;
   }
   const {russian, chinese} = list[idx];
   $('quizQ').textContent = `"${russian}" 的中文意思是？`;
+
+  // 准备 3 个错误 + 1 个正确
   const opts = [{chinese, ok: true}];
   const used = new Set([idx]);
   while (opts.length < 4) {
@@ -126,6 +149,7 @@ function loadQuiz() {
     }
   }
   shuffle(opts);
+
   const box = $('quizOpts'); box.innerHTML = '';
   opts.forEach(o => {
     const d = document.createElement('div');
@@ -133,7 +157,13 @@ function loadQuiz() {
     d.textContent = o.chinese;
     d.onclick = () => {
       box.querySelectorAll('.option').forEach(el => el.onclick = null);
-      if (o.ok) { d.classList.add('correct'); correct++; } else { d.classList.add('incorrect'); wrong++; }
+      if (o.ok) {
+        d.classList.add('correct');
+        correct++;
+      } else {
+        d.classList.add('incorrect');
+        wrong++;
+      }
       $('quizCorrect').textContent = correct;
       $('quizWrong').textContent = wrong;
       $('quizNext').style.display = 'inline-block';
