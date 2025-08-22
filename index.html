@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8"/>
+<title>极简俄语单词机</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
+  :root{--primary:#1a73e8;--light:#e8f0fe}
+  body{margin:0;padding:20px;background:var(--light);font-family:Segoe UI;text-align:center}
+  .btn{background:var(--primary);color:#fff;border:none;padding:10px 20px;border-radius:5px;margin:5px;cursor:pointer}
+  .options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:20px auto;max-width:400px}
+  .option{background:#fff;border:1px solid var(--primary);border-radius:5px;padding:12px;cursor:pointer}
+  .correct{background:#c8e6c9}.incorrect{background:#ffcdd2}
+  .card-outer{perspective:1000px;margin:30px auto;max-width:400px}
+  .card{width:100%;height:180px;position:relative;transform-style:preserve-3d;transition:transform .6s;cursor:pointer}
+  .card div{position:absolute;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;border-radius:10px;backface-visibility:hidden}
+  .card .front{background:#fff;color:var(--primary)}
+  .card .back{background:var(--primary);color:#fff;transform:rotateY(180deg)}
+  .card.flipped{transform:rotateY(180deg)}
+  .stats{margin:10px 0;font-weight:bold}
+</style>
+</head>
+<body>
+  <h1>俄语单词机（离线版）</h1>
+
+  <!-- 模式选择 -->
+  <section id="menu">
+    <label><input type="checkbox" id="random"> 随机顺序</label><br>
+    <button class="btn" onclick="startQuiz()">看俄语选中文</button>
+    <button class="btn" onclick="startCard()">闪卡模式</button>
+  </section>
+
+  <!-- 选择题 -->
+  <section id="quizSec" style="display:none">
+    <h3 id="quizQ"></h3>
+    <div class="options" id="quizOpts"></div>
+    <div id="quizFb"></div>
+    <button class="btn" id="quizNext" style="display:none" onclick="nextQuiz()">下一题</button>
+    <div class="stats">
+      <span id="quizCorrect">0</span> 对 / <span id="quizTotal">0</span>
+    </div>
+  </section>
+
+  <!-- 闪卡 -->
+  <section id="cardSec" style="display:none">
+    <div class="card-outer">
+      <div class="card" id="flashCard">
+        <div class="front" id="frontTxt">加载中...</div>
+        <div class="back" id="backTxt"></div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px">
+      <button class="btn" onclick="prevCard()">◀</button>
+      <button class="btn" onclick="nextCard()">▶</button>
+    </div>
+    <div class="stats" id="cardStats"></div>
+  </section>
+
+<script>
+/* 单词数据 */
+let words = [], list = [], idx = 0, correct = 0, total = 0;
+
+/* 工具函数 */
+const $ = id => document.getElementById(id);
+const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
+
+/* 1. 加载本地 JSON */
+fetch('words.json')
+  .then(r => r.json())
+  .then(data => {
+    words = data;
+    $('menu').style.display = 'block';
+  })
+  .catch(err => alert('加载 words.json 失败：' + err));
+
+/* 2. 获取当前列表 */
+function getList() { return $('random').checked ? shuffle(words) : words; }
+
+/* 3. 选择题模式 */
+function startQuiz() {
+  list = getList();
+  idx = correct = 0;
+  total = list.length;
+  $('menu').style.display = 'none';
+  $('quizSec').style.display = 'block';
+  $('cardSec').style.display = 'none';
+  loadQuiz();
+}
+function loadQuiz() {
+  if (idx >= list.length) {
+    $('quizQ').textContent = '完成！';
+    $('quizOpts').innerHTML = '';
+    $('quizFb').textContent = `答对 ${correct}/${total}`;
+    $('quizNext').style.display = 'none';
+    return;
+  }
+  const {r, c} = list[idx];
+  $('quizQ').textContent = `"${r}" 的中文意思是？`;
+  const opts = [{chinese: c, ok: true}];
+  const used = new Set([idx]);
+  while (opts.length < 4) {
+    const r2 = Math.floor(Math.random() * list.length);
+    if (!used.has(r2)) {
+      opts.push({chinese: list[r2].c, ok: false});
+      used.add(r2);
+    }
+  }
+  shuffle(opts);
+  const box = $('quizOpts'); box.innerHTML = '';
+  opts.forEach(o => {
+    const d = document.createElement('div');
+    d.className = 'option';
+    d.textContent = o.chinese;
+    d.onclick = () => {
+      box.querySelectorAll('.option').forEach(el => el.onclick = null);
+      if (o.ok) { d.classList.add('correct'); correct++; $('quizFb').textContent = '正确！'; }
+      else { d.classList.add('incorrect'); $('quizFb').textContent = `正确：${c}`; }
+      $('quizNext').style.display = 'inline-block';
+    };
+    box.appendChild(d);
+  });
+  $('quizFb').textContent = '';
+  $('quizNext').style.display = 'none';
+  $('quizCorrect').textContent = correct;
+  $('quizTotal').textContent = total;
+}
+function nextQuiz() { idx++; loadQuiz(); }
+
+/* 4. 闪卡模式 */
+function startCard() {
+  list = getList();
+  idx = 0;
+  $('menu').style.display = 'none';
+  $('quizSec').style.display = 'none';
+  $('cardSec').style.display = 'block';
+  loadCard();
+}
+function loadCard() {
+  if (idx >= list.length) {
+    $('frontTxt').textContent = '已完成';
+    $('backTxt').textContent = '';
+    return;
+  }
+  $('frontTxt').textContent = list[idx].r;
+  $('backTxt').textContent = list[idx].c;
+  $('flashCard').classList.remove('flipped');
+  $('cardStats').textContent = `${idx + 1} / ${list.length}`;
+}
+function prevCard() { if (idx > 0) { idx--; loadCard(); } }
+function nextCard() { if (idx < list.length - 1) { idx++; loadCard(); } }
+
+/* 5. 键盘 & 触屏 */
+document.addEventListener('keydown', e => {
+  if ($('cardSec').style.display !== 'none') {
+    if (e.key === 'ArrowLeft') prevCard();
+    if (e.key === 'ArrowRight') nextCard();
+  }
+});
+let touchX = null;
+$('flashCard').addEventListener('touchstart', e => touchX = e.touches[0].clientX);
+$('flashCard').addEventListener('touchend', e => {
+  if (touchX === null) return;
+  const dx = e.changedTouches[0].clientX - touchX;
+  if (Math.abs(dx) > 50) dx > 0 ? prevCard() : nextCard();
+  touchX = null;
+});
+</script>
+</body>
+</html>
